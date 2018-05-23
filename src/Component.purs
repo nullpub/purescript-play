@@ -2,7 +2,8 @@ module Component where
 
 import Prelude
 
-import Data.Maybe (Maybe(..))
+import Control.Monad.Aff (Aff)
+import Control.Monad.Aff.Console (CONSOLE, log)
 
 import Halogen as H
 import Halogen.HTML as HH
@@ -12,13 +13,13 @@ data Query a = ToggleState a | HandleInput String a
 
 type State = { on :: Boolean, clickCount :: Int, title :: String }
 
-component :: forall m. H.Component HH.HTML Query String Void m
+component :: forall eff. H.Component HH.HTML Query String Void (Aff (console :: CONSOLE | eff))
 component =
   H.component
-    { initialState: const initialState
+    { initialState: \i -> initialState { title = i }
     , render
     , eval
-    , receiver: const Nothing
+    , receiver: HE.input HandleInput
     }
   where
 
@@ -43,11 +44,13 @@ component =
           [ HH.text $ "Number of clicks: " <> show state.clickCount ]
       ]
 
-  eval :: Query ~> H.ComponentDSL State Query Void m
+  eval :: Query ~> H.ComponentDSL State Query Void (Aff (console :: CONSOLE | eff))
   eval = case _ of
     ToggleState next -> do
+      H.liftAff $ log "Toggle State"
       H.modify (\state -> state { on = not state.on, clickCount = state.clickCount + 1 })
       pure next
     HandleInput title next -> do
+      H.liftAff $ log title
       H.modify (\state -> state { title = title })
       pure next
